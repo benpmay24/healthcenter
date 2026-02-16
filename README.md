@@ -92,28 +92,38 @@ Frontend runs at **http://localhost:5173** and proxies `/api` to the backend.
 
 If the frontend is served from a different origin than the API (e.g. app at `https://myapp.com`, API at `https://api.myapp.com`), the API must allow that origin. Set `CORS_ORIGIN` to your frontend URL (e.g. `https://myapp.com`) so the API only allows that origin; leave it unset to allow all origins.
 
-### Render (monorepo — one service)
+### Render (two separate services)
 
-Deploy the whole repo as a single Web Service on [Render](https://render.com). The API serves the built frontend from `frontend/dist` and handles `/api` routes.
+Deploy the API and frontend as **two separate services** on [Render](https://render.com).
 
-- **Build command:** `npm run build`  
-  (installs api + frontend deps, builds frontend into `frontend/dist`)
+**Service 1 — API (Web Service)**
 
-- **Start command:** `npm start`  
-  (runs the API; it also serves the frontend)
+- **Root directory:** `api`
+- **Build command:** `npm install`
+- **Start command:** `npm start`
+- **Environment variables:**
+  - `DATABASE_URL` — your PostgreSQL connection string (required for production)
+  - `FDC_API_KEY` — USDA API key (recommended)
+  - `CORS_ORIGIN` — set to your frontend URL (e.g. `https://your-frontend.onrender.com`) so the API allows that origin
 
-Set **Environment Variables** in the Render dashboard (no need for `VITE_API_URL` — the app uses relative `/api` on the same host):
+Render sets `PORT`; the API uses it.
 
-- `DATABASE_URL` — your PostgreSQL connection string (required for production)
-- `FDC_API_KEY` — USDA API key (recommended)
-- `CORS_ORIGIN` — optional; leave unset or set to your Render URL (e.g. `https://your-app.onrender.com`)
+**Service 2 — Frontend**
 
-Render sets `PORT` automatically; the app uses it.
+You can use either a **Static Site** or a **Web Service**.
 
-**If the build fails** with an npm error (e.g. "Exit handler never called") or runs out of memory on the free tier, try:
+- **Root directory:** `frontend`
+- **Build command:** `npm install && npm run build`
+- **Environment variable (build time):** `VITE_API_URL` — your API base URL (e.g. `https://your-api.onrender.com`, no trailing slash)
 
-1. In Render **Environment**, add `NODE_OPTIONS` = `--max-old-space-size=460` to limit Node memory and avoid the process being killed.
-2. If it still fails, upgrade the instance to a plan with more RAM, or remove `NODE_OPTIONS` and retry (the build script was updated to avoid nested `npm`/`cd` which can trigger that error).
+Then either:
+
+- **Static Site:** set **Publish directory** to `dist`. Add a redirect rule so all routes serve `index.html` (for React Router); on Render this is usually configured for SPAs.
+- **Web Service:** **Start command:** `npm start` (serves `dist` with `serve`; Render sets `PORT`).
+
+**Summary:** `VITE_API_URL` is the API base URL the frontend calls. `CORS_ORIGIN` on the API is the frontend origin to allow.
+
+**If the API or frontend build fails** (e.g. "Exit handler never called" or OOM on the free tier), try adding `NODE_OPTIONS` = `--max-old-space-size=460` in that service’s Environment on Render.
 
 ## Features
 

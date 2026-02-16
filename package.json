@@ -1,9 +1,9 @@
 {
   "name": "healthcenter",
   "private": true,
-  "description": "Health tracking app — monorepo root for Render",
+  "description": "Health tracking app — root for local dev; deploy API and frontend as two separate services",
   "scripts": {
-    "build": "npm install --prefix api && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "npm start --prefix api"
+    "dev:api": "npm run dev --prefix api",
+    "dev:frontend": "npm run dev --prefix frontend"
   }
 }

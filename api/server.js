@@ -1,8 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { dbPromise } from './db.js';
 import mealsRouter from './routes/meals.js';
 import ingredientsRouter from './routes/ingredients.js';
@@ -37,15 +35,6 @@ app.use('/api/scheduled-workouts', scheduledWorkoutsRouter);
 app.use('/api/settings', settingsRouter);
 
 app.get('/api/health', (_, res) => res.json({ ok: true }));
-
-// Serve frontend when deployed as monorepo (frontend/dist exists)
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const frontendDist = join(__dirname, '..', 'frontend', 'dist');
-app.use(express.static(frontendDist));
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(join(frontendDist, 'index.html'), (err) => err && next());
-});
 
 const start = async () => {
   await dbPromise;
