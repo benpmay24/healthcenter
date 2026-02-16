@@ -4,6 +4,7 @@
   "description": "Health tracking API",
   "main": "server.js",
   "type": "module",
+  "engines": { "node": ">=20 <25" },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
