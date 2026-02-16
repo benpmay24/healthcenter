@@ -99,7 +99,7 @@ Deploy the API and frontend as **two separate services** on [Render](https://ren
 **Service 1 — API (Web Service)**
 
 - **Root directory:** `api`
-- **Build command:** `npm install`
+- **Build command:** `npm ci` (or `npm install` if you prefer)
 - **Start command:** `npm start`
 - **Environment variables:**
   - `DATABASE_URL` — your PostgreSQL connection string (required for production)
@@ -107,6 +107,12 @@ Deploy the API and frontend as **two separate services** on [Render](https://ren
   - `CORS_ORIGIN` — set to your frontend URL (e.g. `https://your-frontend.onrender.com`) so the API allows that origin
 
 Render sets `PORT`; the API uses it.
+
+**If the API build fails** with `npm error Exit handler never called!` (common on Render’s free tier when building native modules like `better-sqlite3`):
+
+1. **Pin Node version:** The API has `api/.nvmrc` set to `20` so Render uses Node 20 LTS (avoids version mismatch with local Node 24 and can fix the npm error). Redeploy after committing.
+2. In the **API** service on Render, go to **Environment** and add: **Key** `NODE_OPTIONS`, **Value** `--max-old-space-size=460`. Then trigger a new deploy.
+3. If it still fails, try **Build command** `npm ci --prefer-offline --no-audit` or upgrade the service to a plan with more memory.
 
 **Service 2 — Frontend**
 
