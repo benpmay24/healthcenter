@@ -110,6 +110,11 @@ Set **Environment Variables** in the Render dashboard (no need for `VITE_API_URL
 
 Render sets `PORT` automatically; the app uses it.
 
+**If the build fails** with an npm error (e.g. "Exit handler never called") or runs out of memory on the free tier, try:
+
+1. In Render **Environment**, add `NODE_OPTIONS` = `--max-old-space-size=460` to limit Node memory and avoid the process being killed.
+2. If it still fails, upgrade the instance to a plan with more RAM, or remove `NODE_OPTIONS` and retry (the build script was updated to avoid nested `npm`/`cd` which can trigger that error).
+
 ## Features
 
 - **Daily log**: Pick a date, add meals, add ingredients per meal via USDA search or manual entry. View calorie and macro totals for the day. Log weight for any day.

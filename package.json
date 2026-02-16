@@ -3,7 +3,7 @@
   "private": true,
   "description": "Health tracking app — monorepo root for Render",
   "scripts": {
-    "build": "cd api && npm install && cd ../frontend && npm install && npm run build",
-    "start": "cd api && npm start"
+    "build": "npm install --prefix api && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "npm start --prefix api"
   }
 }
