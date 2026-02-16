@@ -3,13 +3,12 @@ import db from '../db.js';
 
 const router = Router();
 
-// Mount at /api/saved-ingredients: request with no path segment has path '' in router
-router.get(['', '/'], (req, res) => {
-  const rows = db.prepare('SELECT * FROM saved_ingredients ORDER BY name').all();
+router.get(['', '/'], async (req, res) => {
+  const rows = await db.all('SELECT * FROM saved_ingredients ORDER BY name');
   res.json(rows);
 });
 
-router.post(['', '/'], (req, res) => {
+router.post(['', '/'], async (req, res) => {
   const {
     name,
     fdc_id,
@@ -23,10 +22,9 @@ router.post(['', '/'], (req, res) => {
     sodium = null,
   } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name required' });
-  db.prepare(`
-    INSERT INTO saved_ingredients (name, fdc_id, quantity, serving_grams, calories, protein, carbs, fat, fiber, sodium)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  await db.run(
+    `INSERT INTO saved_ingredients (name, fdc_id, quantity, serving_grams, calories, protein, carbs, fat, fiber, sodium)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     name.trim(),
     fdc_id ?? null,
     Number(quantity) || 1,
@@ -38,14 +36,14 @@ router.post(['', '/'], (req, res) => {
     Number(fiber) || 0,
     sodium != null ? Number(sodium) : null
   );
-  const row = db.prepare('SELECT * FROM saved_ingredients ORDER BY id DESC LIMIT 1').get();
+  const row = await db.get('SELECT * FROM saved_ingredients ORDER BY id DESC LIMIT 1');
   res.status(201).json(row);
 });
 
-router.delete('/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM saved_ingredients WHERE id = ?').get(req.params.id);
+router.delete('/:id', async (req, res) => {
+  const row = await db.get('SELECT * FROM saved_ingredients WHERE id = ?', req.params.id);
   if (!row) return res.status(404).json({ error: 'Saved ingredient not found' });
-  db.prepare('DELETE FROM saved_ingredients WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM saved_ingredients WHERE id = ?', req.params.id);
   res.status(204).send();
 });
 

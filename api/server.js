@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { dbPromise } from './db.js';
 import mealsRouter from './routes/meals.js';
 import ingredientsRouter from './routes/ingredients.js';
 import totalsRouter from './routes/totals.js';
@@ -17,7 +20,7 @@ import settingsRouter from './routes/settings.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors(process.env.CORS_ORIGIN ? { origin: process.env.CORS_ORIGIN } : {}));
 app.use(express.json());
 
 app.use('/api/meals', mealsRouter);
@@ -35,6 +38,24 @@ app.use('/api/settings', settingsRouter);
 
 app.get('/api/health', (_, res) => res.json({ ok: true }));
 
-app.listen(PORT, () => {
-  console.log(`Health Center API running at http://localhost:${PORT}`);
+// Serve frontend when deployed as monorepo (frontend/dist exists)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const frontendDist = join(__dirname, '..', 'frontend', 'dist');
+app.use(express.static(frontendDist));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(join(frontendDist, 'index.html'), (err) => err && next());
+});
+
+const start = async () => {
+  await dbPromise;
+  app.listen(PORT, () => {
+    console.log(`Health Center API running at http://localhost:${PORT}`);
+    if (process.env.DATABASE_URL) console.log('Using PostgreSQL');
+    else console.log('Using SQLite');
+  });
+};
+start().catch((err) => {
+  console.error('Failed to start:', err);
+  process.exit(1);
 });

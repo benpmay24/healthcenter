@@ -3,9 +3,9 @@ import db from '../db.js';
 
 const router = Router({ mergeParams: true });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const mealId = Number(req.params.mealId);
-  const meal = db.prepare('SELECT * FROM meals WHERE id = ?').get(mealId);
+  const meal = await db.get('SELECT * FROM meals WHERE id = ?', mealId);
   if (!meal) return res.status(404).json({ error: 'Meal not found' });
 
   const {
@@ -25,11 +25,9 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'name required' });
   }
 
-  const run = db.prepare(`
-    INSERT INTO meal_ingredients (meal_id, name, fdc_id, quantity, serving_grams, calories, protein, carbs, fat, fiber, sodium)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  run.run(
+  await db.run(
+    `INSERT INTO meal_ingredients (meal_id, name, fdc_id, quantity, serving_grams, calories, protein, carbs, fat, fiber, sodium)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     mealId,
     name.trim(),
     fdc_id ?? null,
@@ -42,16 +40,16 @@ router.post('/', (req, res) => {
     Number(fiber) || 0,
     sodium != null ? Number(sodium) : null
   );
-  const row = db.prepare('SELECT * FROM meal_ingredients WHERE meal_id = ? ORDER BY id DESC LIMIT 1').get(mealId);
+  const row = await db.get('SELECT * FROM meal_ingredients WHERE meal_id = ? ORDER BY id DESC LIMIT 1', mealId);
   res.status(201).json(row);
 });
 
-router.delete('/:ingredientId', (req, res) => {
+router.delete('/:ingredientId', async (req, res) => {
   const mealId = Number(req.params.mealId);
   const ingredientId = Number(req.params.ingredientId);
-  const ingredient = db.prepare('SELECT * FROM meal_ingredients WHERE id = ? AND meal_id = ?').get(ingredientId, mealId);
+  const ingredient = await db.get('SELECT * FROM meal_ingredients WHERE id = ? AND meal_id = ?', ingredientId, mealId);
   if (!ingredient) return res.status(404).json({ error: 'Ingredient not found' });
-  db.prepare('DELETE FROM meal_ingredients WHERE id = ?').run(ingredientId);
+  await db.run('DELETE FROM meal_ingredients WHERE id = ?', ingredientId);
   res.status(204).send();
 });
 

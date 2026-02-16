@@ -3,83 +3,89 @@ import db from '../db.js';
 
 const router = Router();
 
-router.get(['', '/'], (req, res) => {
-  const routines = db.prepare('SELECT * FROM routines ORDER BY name').all();
-  const withExercises = routines.map((r) => {
-    const items = db.prepare(`
-      SELECT re.id, re.reps, re.sort_order, e.name, e.category
-      FROM routine_exercises re
-      JOIN exercises e ON e.id = re.exercise_id
-      WHERE re.routine_id = ?
-      ORDER BY re.sort_order, re.id
-    `).all(r.id);
-    return { ...r, exercises: items };
-  });
+router.get(['', '/'], async (req, res) => {
+  const routines = await db.all('SELECT * FROM routines ORDER BY name');
+  const withExercises = await Promise.all(
+    routines.map(async (r) => {
+      const items = await db.all(
+        `SELECT re.id, re.reps, re.sort_order, e.name, e.category
+        FROM routine_exercises re
+        JOIN exercises e ON e.id = re.exercise_id
+        WHERE re.routine_id = ?
+        ORDER BY re.sort_order, re.id`,
+        r.id
+      );
+      return { ...r, exercises: items };
+    })
+  );
   res.json(withExercises);
 });
 
-router.get('/:id', (req, res) => {
-  const r = db.prepare('SELECT * FROM routines WHERE id = ?').get(req.params.id);
+router.get('/:id', async (req, res) => {
+  const r = await db.get('SELECT * FROM routines WHERE id = ?', req.params.id);
   if (!r) return res.status(404).json({ error: 'Routine not found' });
-  const exercises = db.prepare(`
-    SELECT re.id, re.reps, re.sort_order, re.exercise_id, e.name, e.category
+  const exercises = await db.all(
+    `SELECT re.id, re.reps, re.sort_order, re.exercise_id, e.name, e.category
     FROM routine_exercises re
     JOIN exercises e ON e.id = re.exercise_id
     WHERE re.routine_id = ?
-    ORDER BY re.sort_order, re.id
-  `).all(r.id);
+    ORDER BY re.sort_order, re.id`,
+    r.id
+  );
   res.json({ ...r, exercises });
 });
 
-router.post(['', '/'], (req, res) => {
+router.post(['', '/'], async (req, res) => {
   const { name, exercises } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name required' });
-  db.prepare('INSERT INTO routines (name) VALUES (?)').run(name.trim());
-  const routine = db.prepare('SELECT * FROM routines ORDER BY id DESC LIMIT 1').get();
-  const insert = db.prepare('INSERT INTO routine_exercises (routine_id, exercise_id, reps, sort_order) VALUES (?, ?, ?, ?)');
-  (exercises || []).forEach((item, i) => {
+  await db.run('INSERT INTO routines (name) VALUES (?)', name.trim());
+  const routine = await db.get('SELECT * FROM routines ORDER BY id DESC LIMIT 1');
+  for (let i = 0; i < (exercises || []).length; i++) {
+    const item = exercises[i];
     if (item.exercise_id != null) {
-      insert.run(routine.id, item.exercise_id, Number(item.reps) || 0, i);
+      await db.run('INSERT INTO routine_exercises (routine_id, exercise_id, reps, sort_order) VALUES (?, ?, ?, ?)', routine.id, item.exercise_id, Number(item.reps) || 0, i);
     }
-  });
-  const exercisesList = db.prepare(`
-    SELECT re.id, re.reps, re.sort_order, e.name, e.category
+  }
+  const exercisesList = await db.all(
+    `SELECT re.id, re.reps, re.sort_order, e.name, e.category
     FROM routine_exercises re
     JOIN exercises e ON e.id = re.exercise_id
     WHERE re.routine_id = ?
-    ORDER BY re.sort_order
-  `).all(routine.id);
+    ORDER BY re.sort_order`,
+    routine.id
+  );
   res.status(201).json({ ...routine, exercises: exercisesList });
 });
 
-router.patch('/:id', (req, res) => {
-  const r = db.prepare('SELECT * FROM routines WHERE id = ?').get(req.params.id);
+router.patch('/:id', async (req, res) => {
+  const r = await db.get('SELECT * FROM routines WHERE id = ?', req.params.id);
   if (!r) return res.status(404).json({ error: 'Routine not found' });
   const { name, exercises } = req.body;
-  if (name?.trim()) db.prepare('UPDATE routines SET name = ? WHERE id = ?').run(name.trim(), r.id);
+  if (name?.trim()) await db.run('UPDATE routines SET name = ? WHERE id = ?', name.trim(), r.id);
   if (Array.isArray(exercises)) {
-    db.prepare('DELETE FROM routine_exercises WHERE routine_id = ?').run(r.id);
-    const insert = db.prepare('INSERT INTO routine_exercises (routine_id, exercise_id, reps, sort_order) VALUES (?, ?, ?, ?)');
-    exercises.forEach((item, i) => {
-      if (item.exercise_id != null) insert.run(r.id, item.exercise_id, Number(item.reps) || 0, i);
-    });
+    await db.run('DELETE FROM routine_exercises WHERE routine_id = ?', r.id);
+    for (let i = 0; i < exercises.length; i++) {
+      const item = exercises[i];
+      if (item.exercise_id != null) await db.run('INSERT INTO routine_exercises (routine_id, exercise_id, reps, sort_order) VALUES (?, ?, ?, ?)', r.id, item.exercise_id, Number(item.reps) || 0, i);
+    }
   }
-  const routine = db.prepare('SELECT * FROM routines WHERE id = ?').get(r.id);
-  const exercisesList = db.prepare(`
-    SELECT re.id, re.reps, re.sort_order, e.name, e.category
+  const routine = await db.get('SELECT * FROM routines WHERE id = ?', r.id);
+  const exercisesList = await db.all(
+    `SELECT re.id, re.reps, re.sort_order, e.name, e.category
     FROM routine_exercises re
     JOIN exercises e ON e.id = re.exercise_id
     WHERE re.routine_id = ?
-    ORDER BY re.sort_order
-  `).all(r.id);
+    ORDER BY re.sort_order`,
+    r.id
+  );
   res.json({ ...routine, exercises: exercisesList });
 });
 
-router.delete('/:id', (req, res) => {
-  const r = db.prepare('SELECT * FROM routines WHERE id = ?').get(req.params.id);
+router.delete('/:id', async (req, res) => {
+  const r = await db.get('SELECT * FROM routines WHERE id = ?', req.params.id);
   if (!r) return res.status(404).json({ error: 'Routine not found' });
-  db.prepare('DELETE FROM routine_exercises WHERE routine_id = ?').run(r.id);
-  db.prepare('DELETE FROM routines WHERE id = ?').run(r.id);
+  await db.run('DELETE FROM routine_exercises WHERE routine_id = ?', r.id);
+  await db.run('DELETE FROM routines WHERE id = ?', r.id);
   res.status(204).send();
 });
 

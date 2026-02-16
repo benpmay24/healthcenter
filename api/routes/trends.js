@@ -3,21 +3,22 @@ import db from '../db.js';
 
 const router = Router();
 
-router.get('/macros', (req, res) => {
+router.get('/macros', async (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) {
     return res.status(400).json({ error: 'from and to date required (YYYY-MM-DD)' });
   }
-  const meals = db.prepare('SELECT id, date FROM meals WHERE date >= ? AND date <= ? ORDER BY date').all(from, to);
+  const meals = await db.all('SELECT id, date FROM meals WHERE date >= ? AND date <= ? ORDER BY date', from, to);
   const mealIds = meals.map((m) => m.id);
   if (mealIds.length === 0) {
     return res.json({ byDate: [] });
   }
   const placeholders = mealIds.map(() => '?').join(',');
-  const ingredients = db.prepare(`
-    SELECT meal_id, calories, protein, carbs, fat, fiber
-    FROM meal_ingredients WHERE meal_id IN (${placeholders})
-  `).all(...mealIds);
+  const ingredients = await db.all(
+    `SELECT meal_id, calories, protein, carbs, fat, fiber
+    FROM meal_ingredients WHERE meal_id IN (${placeholders})`,
+    ...mealIds
+  );
 
   const dateToMealIds = {};
   for (const m of meals) {
@@ -48,7 +49,7 @@ router.get('/macros', (req, res) => {
   res.json({ byDate });
 });
 
-router.get('/weight', (req, res) => {
+router.get('/weight', async (req, res) => {
   const { from, to } = req.query;
   const KG_TO_LBS = 2.20462262185;
   let sql = 'SELECT date, weight_kg FROM weight_log';
@@ -64,7 +65,7 @@ router.get('/weight', (req, res) => {
     params.push(to);
   }
   sql += ' ORDER BY date';
-  const rows = params.length ? db.prepare(sql).all(...params) : db.prepare(sql).all();
+  const rows = params.length ? await db.all(sql, ...params) : await db.all(sql);
   const data = rows.map((r) => ({
     date: r.date,
     weight_kg: r.weight_kg,

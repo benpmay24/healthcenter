@@ -3,58 +3,55 @@ import db from '../db.js';
 
 const router = Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { date } = req.query;
   if (!date) {
     return res.status(400).json({ error: 'date query required' });
   }
-  const meals = db.prepare(`
-    SELECT * FROM meals WHERE date = ? ORDER BY created_at
-  `).all(date);
-  const withIngredients = meals.map((meal) => {
-    const ingredients = db.prepare(`
-      SELECT * FROM meal_ingredients WHERE meal_id = ? ORDER BY created_at
-    `).all(meal.id);
-    return { ...meal, ingredients };
-  });
+  const meals = await db.all('SELECT * FROM meals WHERE date = ? ORDER BY created_at', date);
+  const withIngredients = await Promise.all(
+    meals.map(async (meal) => {
+      const ingredients = await db.all('SELECT * FROM meal_ingredients WHERE meal_id = ? ORDER BY created_at', meal.id);
+      return { ...meal, ingredients };
+    })
+  );
   res.json(withIngredients);
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { date, name } = req.body;
   if (!date || !name?.trim()) {
     return res.status(400).json({ error: 'date and name required' });
   }
-  const run = db.prepare('INSERT INTO meals (date, name) VALUES (?, ?)');
-  const result = run.run(date, name.trim());
-  const meal = db.prepare('SELECT * FROM meals WHERE id = ?').get(result.lastInsertRowid);
+  const result = await db.run('INSERT INTO meals (date, name) VALUES (?, ?)', date, name.trim());
+  const meal = await db.get('SELECT * FROM meals WHERE id = ?', result.lastInsertRowid);
   res.status(201).json({ ...meal, ingredients: [] });
 });
 
-router.get('/:id', (req, res) => {
-  const meal = db.prepare('SELECT * FROM meals WHERE id = ?').get(req.params.id);
+router.get('/:id', async (req, res) => {
+  const meal = await db.get('SELECT * FROM meals WHERE id = ?', req.params.id);
   if (!meal) return res.status(404).json({ error: 'Meal not found' });
-  const ingredients = db.prepare('SELECT * FROM meal_ingredients WHERE meal_id = ? ORDER BY created_at').all(meal.id);
+  const ingredients = await db.all('SELECT * FROM meal_ingredients WHERE meal_id = ? ORDER BY created_at', meal.id);
   res.json({ ...meal, ingredients });
 });
 
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const { name } = req.body;
-  const meal = db.prepare('SELECT * FROM meals WHERE id = ?').get(req.params.id);
+  const meal = await db.get('SELECT * FROM meals WHERE id = ?', req.params.id);
   if (!meal) return res.status(404).json({ error: 'Meal not found' });
   if (name?.trim()) {
-    db.prepare('UPDATE meals SET name = ? WHERE id = ?').run(name.trim(), meal.id);
+    await db.run('UPDATE meals SET name = ? WHERE id = ?', name.trim(), meal.id);
   }
-  const updated = db.prepare('SELECT * FROM meals WHERE id = ?').get(meal.id);
-  const ingredients = db.prepare('SELECT * FROM meal_ingredients WHERE meal_id = ?').all(meal.id);
+  const updated = await db.get('SELECT * FROM meals WHERE id = ?', meal.id);
+  const ingredients = await db.all('SELECT * FROM meal_ingredients WHERE meal_id = ?', meal.id);
   res.json({ ...updated, ingredients });
 });
 
-router.delete('/:id', (req, res) => {
-  const meal = db.prepare('SELECT * FROM meals WHERE id = ?').get(req.params.id);
+router.delete('/:id', async (req, res) => {
+  const meal = await db.get('SELECT * FROM meals WHERE id = ?', req.params.id);
   if (!meal) return res.status(404).json({ error: 'Meal not found' });
-  db.prepare('DELETE FROM meal_ingredients WHERE meal_id = ?').run(meal.id);
-  db.prepare('DELETE FROM meals WHERE id = ?').run(meal.id);
+  await db.run('DELETE FROM meal_ingredients WHERE meal_id = ?', meal.id);
+  await db.run('DELETE FROM meals WHERE id = ?', meal.id);
   res.status(204).send();
 });
 

@@ -1,4 +1,6 @@
-const API = '/api';
+// In production, set VITE_API_URL to your API origin (e.g. https://api.example.com).
+// Leave unset for same-origin /api or when using a reverse proxy.
+const API = import.meta.env.VITE_API_URL ?? '/api';
 
 async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, {

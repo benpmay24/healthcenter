@@ -3,9 +3,9 @@ import db from '../db.js';
 
 const router = Router();
 
-router.get('/:date', (req, res) => {
+router.get('/:date', async (req, res) => {
   const { date } = req.params;
-  const meals = db.prepare('SELECT id FROM meals WHERE date = ?').all(date);
+  const meals = await db.all('SELECT id FROM meals WHERE date = ?', date);
   const mealIds = meals.map((m) => m.id);
   if (mealIds.length === 0) {
     return res.json({
@@ -20,10 +20,11 @@ router.get('/:date', (req, res) => {
     });
   }
   const placeholders = mealIds.map(() => '?').join(',');
-  const ingredients = db.prepare(`
-    SELECT meal_id, calories, protein, carbs, fat, fiber, sodium
-    FROM meal_ingredients WHERE meal_id IN (${placeholders})
-  `).all(...mealIds);
+  const ingredients = await db.all(
+    `SELECT meal_id, calories, protein, carbs, fat, fiber, sodium
+    FROM meal_ingredients WHERE meal_id IN (${placeholders})`,
+    ...mealIds
+  );
 
   const totals = {
     calories: 0,
@@ -55,7 +56,7 @@ router.get('/:date', (req, res) => {
     byMeal[i.meal_id].fiber += fib;
     byMeal[i.meal_id].sodium += s;
   }
-  const mealList = db.prepare('SELECT id, name FROM meals WHERE date = ? ORDER BY created_at').all(date);
+  const mealList = await db.all('SELECT id, name FROM meals WHERE date = ? ORDER BY created_at', date);
   const empty = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 };
   res.json({
     date,
