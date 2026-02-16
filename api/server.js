@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import './env.js';
 import express from 'express';
 import cors from 'cors';
 import { dbPromise } from './db.js';
