@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "serve -s dist -l ${PORT:-3000}"
+    "start": "serve -s dist -l ${PORT:-3000}",
+    "start:with-install": "corepack enable && yarn install --frozen-lockfile && yarn build && serve -s dist -l ${PORT:-3000}"
   },
   "dependencies": {
     "react": "^18.3.1",

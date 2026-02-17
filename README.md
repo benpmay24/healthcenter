@@ -112,16 +112,24 @@ Render sets `PORT`; the API uses it. Commit `api/yarn.lock` so the build is repr
 
 **Service 2 — Frontend**
 
-You can use either a **Static Site** or a **Web Service**.
+**Option A: Static Site (recommended)** — no Node at runtime, just the built files. Uses **Yarn** to avoid npm "Exit handler never called".
 
-- **Root directory:** `frontend`
-- **Build command:** `npm install && npm run build`
-- **Environment variable (build time):** `VITE_API_URL` — your API base URL (e.g. `https://your-api.onrender.com`, no trailing slash)
+1. In Render: **New** → **Static Site**. Connect the same repo.
+2. **Root directory:** `frontend`
+3. **Build command:** `corepack enable && yarn install --frozen-lockfile && yarn run build`
+4. **Publish directory:** `dist`
+5. **Environment** (build time): add **Key** `VITE_API_URL`, **Value** your API URL (e.g. `https://healthcenter-api.onrender.com` — no trailing slash).
+6. Save. For React Router, in **Redirects / Rewrites** add: **Rule** `/*`, **Destination** `/index.html`, **Type** **Rewrite**.
+7. Commit `frontend/yarn.lock` and `frontend/.npmrc` (registry) so the build is reproducible.
 
-Then either:
+**Option B: Web Service** — Node runs `serve` to host the app. Uses **Yarn**.
 
-- **Static Site:** set **Publish directory** to `dist`. Add a redirect rule so all routes serve `index.html` (for React Router); on Render this is usually configured for SPAs.
-- **Web Service:** **Start command:** `npm start` (serves `dist` with `serve`; Render sets `PORT`).
+1. In Render: **New** → **Web Service**. Connect the same repo.
+2. **Root directory:** `frontend`
+3. **Build command:** `corepack enable && yarn install --frozen-lockfile && yarn run build`
+4. **Start command:** `yarn start` (or `npm run start:with-install` if deps aren’t persisted — that installs, builds, then serves)
+5. **Environment:** add **Key** `VITE_API_URL`, **Value** your API URL. Set **before** the first build.
+6. Commit `frontend/yarn.lock` and `frontend/.npmrc`.
 
 **Summary:** `VITE_API_URL` is the API base URL the frontend calls. `CORS_ORIGIN` on the API is the frontend origin to allow.
 
