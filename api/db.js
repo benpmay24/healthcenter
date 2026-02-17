@@ -122,10 +122,15 @@ async function initDb() {
     const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
     const schemaPath = join(__dirname, 'schema-postgres.sql');
     const schema = readFileSync(schemaPath, 'utf8');
-    const statements = schema
+    // Strip lines that are entirely comments (-- ...), then split into statements
+    const withoutCommentLines = schema
+      .split('\n')
+      .filter((line) => line.trim().length === 0 || !line.trim().startsWith('--'))
+      .join('\n');
+    const statements = withoutCommentLines
       .split(';')
       .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !s.startsWith('--'));
+      .filter((s) => s.length > 0);
     for (const stmt of statements) {
       await pool.query(stmt + ';');
     }
