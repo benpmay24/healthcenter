@@ -109,11 +109,14 @@ Deploy the API and frontend as **two separate services** on [Render](https://ren
 
 Render sets `PORT`; the API uses it.
 
-**If the API build fails** with `npm error Exit handler never called!` (common on Render’s free tier when building native modules like `better-sqlite3`):
+**If the API hits `npm error Exit handler never called!`** (even with build skipped and install at start), **deploy the API with Docker** so npm runs inside the image build instead:
 
-1. **Pin Node version:** The API has `api/.nvmrc` set to `20` so Render uses Node 20 LTS (avoids version mismatch with local Node 24 and can fix the npm error). Redeploy after committing.
-2. In the **API** service on Render, go to **Environment** and add: **Key** `NODE_OPTIONS`, **Value** `--max-old-space-size=460`. Then trigger a new deploy.
-3. If it still fails, try **Build command** `npm ci --prefer-offline --no-audit` or upgrade the service to a plan with more memory.
+1. In Render, change the API service **Environment** from **Node** to **Docker**.
+2. Set **Dockerfile path** to `api/Dockerfile` (or leave default if Root directory is `api` — then use `Dockerfile`).
+3. Leave **Root directory** as `api`. No build command or start command needed — the Dockerfile runs `npm ci` during image build and starts with `node server.js`.
+4. Set the same **Environment variables** as above (`DATABASE_URL`, `FDC_API_KEY`, `CORS_ORIGIN`). Render still injects `PORT`.
+
+The Docker build runs in a clean container and usually avoids the npm bug; at runtime the app just runs `node server.js` with no npm.
 
 **Service 2 — Frontend**
 
