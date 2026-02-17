@@ -96,27 +96,19 @@ If the frontend is served from a different origin than the API (e.g. app at `htt
 
 Deploy the API and frontend as **two separate services** on [Render](https://render.com).
 
-**Service 1 — API (Web Service)**
+**Service 1 — API (Web Service, Node + Yarn)**  
+Use Yarn (not npm) to avoid "Exit handler never called" on Render.
 
 - **Root directory:** `api`
-- **Build command:** `npm ci` (or `npm install` if you prefer)
+- **Build command:** `corepack enable && yarn install --frozen-lockfile`
 - **Start command:** `npm run start:with-install`  
-  (installs dependencies then starts the server — use this if you see “Cannot find package …/node_modules/express” or similar; otherwise plain `npm start` is enough)
+  (runs `yarn install --frozen-lockfile && node server.js` so deps are present at runtime)
 - **Environment variables:**
   - `DATABASE_URL` — your PostgreSQL connection string (required for production)
   - `FDC_API_KEY` — USDA API key (recommended)
   - `CORS_ORIGIN` — set to your frontend URL (e.g. `https://your-frontend.onrender.com`) so the API allows that origin
 
-Render sets `PORT`; the API uses it.
-
-**If the API hits `npm error Exit handler never called!`** (even with build skipped and install at start), **deploy the API with Docker** so npm runs inside the image build instead:
-
-1. In Render, change the API service **Environment** from **Node** to **Docker**.
-2. Set **Dockerfile path** to `api/Dockerfile` (or leave default if Root directory is `api` — then use `Dockerfile`).
-3. Leave **Root directory** as `api`. No build command or start command needed — the Dockerfile runs `npm ci` during image build and starts with `node server.js`.
-4. Set the same **Environment variables** as above (`DATABASE_URL`, `FDC_API_KEY`, `CORS_ORIGIN`). Render still injects `PORT`.
-
-The Docker build runs in a clean container and usually avoids the npm bug; at runtime the app just runs `node server.js` with no npm.
+Render sets `PORT`; the API uses it. Commit `api/yarn.lock` so the build is reproducible.
 
 **Service 2 — Frontend**
 

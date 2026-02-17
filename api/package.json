@@ -7,7 +7,7 @@
   "engines": { "node": ">=20 <25" },
   "scripts": {
     "start": "node server.js",
-    "start:with-install": "npm install && node server.js",
+    "start:with-install": "corepack enable && yarn install --frozen-lockfile && node server.js",
     "dev": "node --watch server.js"
   },
   "dependencies": {
