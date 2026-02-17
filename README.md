@@ -100,7 +100,8 @@ Deploy the API and frontend as **two separate services** on [Render](https://ren
 
 - **Root directory:** `api`
 - **Build command:** `npm ci` (or `npm install` if you prefer)
-- **Start command:** `npm start`
+- **Start command:** `npm run start:with-install`  
+  (installs dependencies then starts the server — use this if you see “Cannot find package …/node_modules/express” or similar; otherwise plain `npm start` is enough)
 - **Environment variables:**
   - `DATABASE_URL` — your PostgreSQL connection string (required for production)
   - `FDC_API_KEY` — USDA API key (recommended)
